@@ -1216,32 +1216,32 @@ module.exports = function() {
     describe('metadata projection', function() {
       it('passed metadata to connect', function(done) {
         var metadata = {username: 'user'};
-  
+
         this.backend.use('connect', function(request, next) {
           Object.assign(request.agent.custom, request.req);
           next();
         });
-  
+
         var connection = this.backend.connect(undefined, metadata);
         connection.on('connected', function() {
           expect(connection.agent.custom).eql(metadata);
           done();
         });
       });
-  
+
       it('passed metadata to submit', function(done) {
         var metadata = {username: 'user'};
-  
+
         this.backend.use('connect', function(request, next) {
           Object.assign(request.agent.custom, request.req);
           next();
         });
-  
+
         this.backend.use('submit', function(request) {
           expect(request.agent.custom).eql(metadata);
           done();
         });
-  
+
         var connection = this.backend.connect(undefined, metadata);
         var doc = null;
         connection.on('connected', function() {
@@ -1252,22 +1252,22 @@ module.exports = function() {
           });
         });
       });
-  
+
       it('received local op without metadata', function(done) {
         var metadata = {username: 'user'};
-  
+
         this.backend.use('connect', function(request, next) {
           Object.assign(request.agent.custom, request.req);
           next();
         });
-  
+
         this.backend.use('submit', function(request, next) {
           expect(request.agent.custom).eql(metadata);
           Object.assign(request.op.m, request.agent.custom);
           request.opMetadataProjection = {username: true};
           next();
         });
-  
+
         var connection = this.backend.connect(undefined, metadata);
         var doc = null;
         connection.on('connected', function() {
@@ -1289,14 +1289,14 @@ module.exports = function() {
           Object.assign(request.agent.custom, request.req);
           next();
         });
-  
+
         this.backend.use('submit', function(request, next) {
           expect(request.agent.custom).to.have.property('username');
           Object.assign(request.op.m, request.agent.custom);
           request.opMetadataProjection = {username: true};
           next();
         });
-  
+
         this.backend.use('apply', function(request, next) {
           expect(request.op.m).to.have.property('username');
           next();
@@ -1311,15 +1311,15 @@ module.exports = function() {
           expect(request.op.m).to.have.property('username');
           next();
         });
-  
+
         var subscriberCount = 10;
         var subscriberOpCount = 10;
-  
+
         var metadatas = [];
         for (var i = 0; i < subscriberCount; i++) {
           metadatas[i] = {username: 'user-'+i};
         }
-  
+
         var ops = [];
         for (var i = 0; i < subscriberCount; i++) {
           ops[i] = [];
@@ -1327,9 +1327,9 @@ module.exports = function() {
             ops[i].push({p: ['tricks '+i+' '+j], oi: 1});
           }
         }
-  
+
         var docs = [];
-  
+
         function submitOps() {
           for (var j = 0; j < subscriberOpCount; j++) {
             for (var i = 0; i < subscriberCount; i++) {
@@ -1338,7 +1338,7 @@ module.exports = function() {
             }
           }
         }
-  
+
         function validateAndDone() {
           var firstDoc = docs[0];
           // validate that all documents across connections are in sync
@@ -1348,46 +1348,44 @@ module.exports = function() {
           }
           done();
         };
-  
+
         var submitOpsAfter = util.callAfter(subscriberCount - 1, submitOps);
         var doneAfter = util.callAfter((subscriberCount * subscriberCount * subscriberOpCount) - 1, validateAndDone);
-  
+
         function getDoc(callback) {
           var thisDoc = this;
           thisDoc.fetch(function() {
             if (!thisDoc.data) {
-                return thisDoc.create({}, function() {
-                  thisDoc.subscribe(callback);
-                });
-              }
-              thisDoc.subscribe(callback);
+              return thisDoc.create({}, function() {
+                thisDoc.subscribe(callback);
+              });
+            }
+            thisDoc.subscribe(callback);
           });
         }
-  
+
         for (var i = 0; i < subscriberCount; i++) {
           var metadata = metadatas[i];
-  
+
           var connection = this.backend.connect(undefined, Object.assign({}, metadata));
           connection.__test_metadata = Object.assign({}, metadata);
           connection.__test_id = i;
-  
+
           connection.on('connected', function() {
             var thisConnection = this;
-  
+
             expect(thisConnection.agent.custom).eql(thisConnection.__test_metadata);
-  
+
             thisConnection.doc = docs[thisConnection.__test_id] = thisConnection.get('dogs', 'fido');
-  
-            thisConnection.doc.on('op', function(op, source, src, context) {
+
+            thisConnection.doc.on('op', function() {
               doneAfter();
             });
-  
+
             getDoc.bind(thisConnection.doc)(submitOpsAfter);
           });
         }
       });
-
     });
-
   });
 };
