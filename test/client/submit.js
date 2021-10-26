@@ -1275,10 +1275,13 @@ module.exports = function() {
           doc = connection.get('dogs', 'fido');
           doc.create({name: 'fido'}, function() {
             doc.on('op', function(op, source, src, context) {
+              if (src) {
+                return;
+              }
               expect(context.op.m).equal(undefined);
               done();
             });
-            doc.submitOp([{p: ['tricks'], oi: ['fetch']}], {source: 'trainer'}, errorHandler(done));
+            doc.submitOp([{p: ['tricks'], oi: ['fetch']}], {source: 'trainer'}, errorHandler(function() {}));
           });
         });
       });
